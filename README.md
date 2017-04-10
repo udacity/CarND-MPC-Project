@@ -28,6 +28,8 @@ Self-Driving Car Engineer Nanodegree Program
   * Windows: TODO, use Linux subsystem.
 * Simulator. You can download these from the [project intro page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/aca605f8-8219-465d-9c5d-ca72c699561d/lessons/e8235395-22dd-4b87-88e0-d108c5e5bbf4/concepts/6a4d8d42-6a04-4aa6-b284-1697c0fd6562) in the classroom.
 
+
+
 ## Basic Build Instructions
 
 
@@ -35,6 +37,12 @@ Self-Driving Car Engineer Nanodegree Program
 2. Make a build directory: `mkdir build && cd build`
 3. Compile: `cmake .. && make`
 4. Run it: `./mpc`.
+
+## Tips
+
+It's recommended to test the MPC on basic examples to see if your implementation behaves as desired. One possible example
+is the vehicle starting offset of a straight line (reference). If the MPC implementation is correct, after some number of timesteps
+(not too many) it should find and track the reference line.
 
 ## Editor Settings
 

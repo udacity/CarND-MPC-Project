@@ -58,7 +58,9 @@ tuple<vector<double>, vector<double>, double> MPC::Solve(vector<double> x0) {
     gu[i] = 0;
   }
 
+  //
   // NOTE: Most of this stuff you don't have to worry about
+  //
 
   // object that computes objective and constraints
   FG_eval fg_eval;
