@@ -1,5 +1,5 @@
 #include "MPC.h"
-#include <cppad/cppad.h>
+#include <cppad/cppad.hpp>
 #include <cppad/ipopt/solve.hpp>
 
 namespace {
