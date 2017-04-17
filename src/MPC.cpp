@@ -97,6 +97,6 @@ tuple<vector<double>, vector<double>, double> MPC::Solve(vector<double> x0) {
   // Fill in the appropriate values
   auto x1 = {0.0, 0.0, 0.0};
   auto u1 = {0.0, 0.0};
-  auto cost = solution.objvalue;
+  auto cost = solution.obj_value;
   return std::make_tuple(x1, u1, cost);
 }
