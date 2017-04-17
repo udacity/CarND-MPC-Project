@@ -19,7 +19,7 @@ Self-Driving Car Engineer Nanodegree Program
   * Follow the instructions in the [uWebSockets README](https://github.com/uWebSockets/uWebSockets/blob/master/README.md) to get setup for your platform. You can download the zip of the appropriate version from the [releases page](https://github.com/uWebSockets/uWebSockets/releases). Here's a link to the [v0.13 zip](https://github.com/uWebSockets/uWebSockets/archive/v0.13.0.zip).
   * If you have MacOS and have [Homebrew](https://brew.sh/) installed you can just run the ./install-mac.sh script to install this.
 * [Ipopt](https://projects.coin-or.org/Ipopt)
-  * Mac: `brew install ipopt`
+  * Mac: `brew install ipopt --with-openblas`
   * Linux `sudo apt-get install ipopt` or equivalent.
   * Windows: TODO, use Linux subsystem.
 * [CppAD](https://www.coin-or.org/CppAD/)
