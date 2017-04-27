@@ -18,11 +18,11 @@ double rad2deg(double x) { return x * 180 / pi(); }
 std::string hasData(std::string s) {
   auto found_null = s.find("null");
   auto b1 = s.find_first_of("[");
-  auto b2 = s.find_last_of("]");
+  auto b2 = s.rfind("}]");
   if (found_null != std::string::npos) {
     return "";
   } else if (b1 != std::string::npos && b2 != std::string::npos) {
-    return s.substr(b1, b2 - b1 + 1);
+    return s.substr(b1, b2 - b1 + 2);
   }
   return "";
 }
@@ -45,11 +45,11 @@ int main() {
         std::string event = j[0].get<std::string>();
         if (event == "telemetry") {
           // j[1] is the data JSON object
-          double cte = std::stod(j[1]["cte"].get<std::string>());
-          double epsi = std::stod(j[1]["epsi"].get<std::string>());
-          double speed = std::stod(j[1]["speed"].get<std::string>());
-          double throttle = std::stod(j[1]["throttle"].get<std::string>());
-          double angle = std::stod(j[1]["steering_angle"].get<std::string>());
+          double cte = j[1]["cte"];
+          double epsi = j[1]["epsi"];
+          double speed = j[1]["speed"];
+          double throttle = j[1]["throttle"];
+          double angle = j[1]["steering_angle"];
 
           /*
           * TODO: Calculate steeering angle and throttle here.
