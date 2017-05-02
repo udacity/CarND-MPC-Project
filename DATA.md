@@ -8,7 +8,7 @@ Fields:
 * ptsy (Array<float>) - The global y positions of the waypoints. This corresponds to the z coordinate in Unity
 since y is the up-down direction.
 * psi (float) - The orientation of the vehicle in **radians** converted from the Unity format to the standard format expected in most mathemetical functions (more details below).
-* psi_unity (float) - The orientation of the vehicle in **radians**.
+* psi_unity (float) - The orientation of the vehicle in **radians**. This is an orientation commonly used in [navigation](https://en.wikipedia.org/wiki/Polar_coordinate_system#Position_and_navigation).
 * x (float) - The global x position of the vehicle.
 * y (float) - The global y position of the vehicle.
 * steering_angle (float) - The current steering angle in **radians**.
@@ -16,9 +16,9 @@ since y is the up-down direction.
 * speed (float) - The current velocity in **mph**.
 
 
-### Unity Degree Conversion
+### `psi` and `psi_unity` representations
 
-The degree representation does not correspond to the following representation below, standard in most mathematical functions. `psi` is the mapping to the below orientation representation.
+`psi`
 
 ```
 //            90
@@ -27,3 +27,15 @@ The degree representation does not correspond to the following representation be
 //
 //            270
 ```
+
+
+`psi_unity`
+
+```
+//            0/360
+//
+//  270                   90
+//
+//            180
+```
+
