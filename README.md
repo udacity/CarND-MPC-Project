@@ -47,6 +47,7 @@ Self-Driving Car Engineer Nanodegree Program
 is the vehicle starting offset of a straight line (reference). If the MPC implementation is correct, after some number of timesteps
 (not too many) it should find and track the reference line.
 2. The `lake_track_waypoints.csv` file has the waypoints of the lake track. You could use this to fit polynomials and points and see of how well your model tracks curve. NOTE: This file might be not completely in sync with the simulator so your solution should NOT depend on it.
+3. For visualization this C++ [matplotlib wrapper](https://github.com/lava/matplotlib-cpp) could be helpful.
 
 ## Editor Settings
 
