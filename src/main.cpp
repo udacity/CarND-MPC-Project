@@ -76,8 +76,8 @@ int main() {
     cout << sdata << endl;
     if (sdata.size() > 2 && sdata[0] == '4' && sdata[1] == '2') {
       string s = hasData(sdata);
-      auto j = json::parse(s);
       if (s != "") {
+        auto j = json::parse(s);
         string event = j[0].get<string>();
         if (event == "telemetry") {
           // j[1] is the data JSON object
