@@ -6,7 +6,7 @@
 using CppAD::AD;
 
 // TODO: Set the timestep length and duration
-size_t T = 0;
+size_t N = 0;
 double dt = 0;
 
 // NOTE: DON'T CHANGE THIS IT WAS CAREFULLY CHOSEN!!!
@@ -38,21 +38,25 @@ vector<double> MPC::Solve(Eigen::VectorXd x0, Eigen::VectorXd coeffs) {
   size_t i;
   typedef CPPAD_TESTVECTOR(double) Dvector;
 
-  // TODO: Set the number of variables (includes both states and inputs)
+  // TODO: Set the number of model variables (includes both states and inputs).
+  // For example: If the state is a 4 element vector, the actuators is a 2
+  // element vector and there are 10 timesteps. The number of variables is:
+  //
+  // 4 * 10 + 2 * 9
   size_t n_vars = 0;
   // TODO: Set the number of constraints
   size_t n_constraints = 0;
 
   // Initial value of the independent variables.
-  // Should be 0 besides initial state.
+  // SHOULD BE 0 besides initial state.
   Dvector vars(n_vars);
   for (int i = 0; i < n_vars; i++) {
     vars[i] = 0;
   }
 
-  // lower and upper limits for x
   Dvector vars_lowerbound(n_vars);
   Dvector vars_upperbound(n_vars);
+  // TODO: Set lower and upper limits for variables.
 
   // Lower and upper limits for the constraints
   // Should be 0 besides initial state.
@@ -63,13 +67,12 @@ vector<double> MPC::Solve(Eigen::VectorXd x0, Eigen::VectorXd coeffs) {
     constraints_upperbound[i] = 0;
   }
 
-  //
-  // NOTE: Most of this stuff you don't have to worry about
-  //
-
   // object that computes objective and constraints
   FG_eval fg_eval(coeffs);
 
+  //
+  // NOTE: You don't have to worry about these options
+  //
   // options for IPOPT solver
   std::string options;
   // Uncomment this if you'd like more print information
@@ -81,7 +84,7 @@ vector<double> MPC::Solve(Eigen::VectorXd x0, Eigen::VectorXd coeffs) {
   // magnitude.
   options += "Sparse  true        forward\n";
   options += "Sparse  true        reverse\n";
-  // Currently the solver has a maximum time limit of 0.5 seconds.
+  // NOTE: Currently the solver has a maximum time limit of 0.5 seconds.
   // Change this as you see fit.
   options += "Numeric max_cpu_time          0.5\n";
 
@@ -100,9 +103,10 @@ vector<double> MPC::Solve(Eigen::VectorXd x0, Eigen::VectorXd coeffs) {
   auto cost = solution.obj_value;
   std::cout << "Cost " << cost << std::endl;
 
-  // TODO: return the first actuators values.
-  // Note {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0,3.0}
-  // creates a 3 element double vector.
-  // Fill in the appropriate values
+  // TODO: Return the first actuator values. The variables can be accessed with
+  // `solution.x[i]`.
+  //
+  // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
+  // creates a 2 element double vector.
   return {};
 }

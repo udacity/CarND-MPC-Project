@@ -76,8 +76,8 @@ int main() {
     cout << sdata << endl;
     if (sdata.size() > 2 && sdata[0] == '4' && sdata[1] == '2') {
       string s = hasData(sdata);
-      auto j = json::parse(s);
       if (s != "") {
+        auto j = json::parse(s);
         string event = j[0].get<string>();
         if (event == "telemetry") {
           // j[1] is the data JSON object
@@ -89,7 +89,7 @@ int main() {
           double v = j[1]["speed"];
 
           /*
-          * TODO: Calculate steeering angle and throttle here.
+          * TODO: Calculate steeering angle and throttle using MPC.
           *
           * Both are in between [-1, 1].
           *
