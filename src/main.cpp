@@ -1,6 +1,8 @@
 #include <math.h>
 #include <uWS/uWS.h>
+#include <chrono>
 #include <iostream>
+#include <thread>
 #include <vector>
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
@@ -102,6 +104,13 @@ int main() {
           msgJson["throttle"] = throttle_value;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
+          // Latency
+          // The purpose is to mimic real driving conditions where
+          // the car does actuate the commands instantly.
+          //
+          // Feel free to play around with this value but should be to drive
+          // around the track with 100ms latency.
+          this_thread::sleep_for(chrono::milliseconds(100));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
