@@ -29,6 +29,17 @@ Self-Driving Car Engineer Nanodegree Program
   * Linux: `sudo apt-get install gfortran`. Additionall you have also have to install gcc and g++, `sudo apt-get install gcc g++`. Look in [this Dockerfile](https://github.com/udacity/CarND-MPC-Quizzes/blob/master/Dockerfile) for more info.
 * [Ipopt](https://projects.coin-or.org/Ipopt)
   * Mac: `brew install ipopt`
+       +  Some Mac users have experienced the following error:
+       ```
+       Listening to port 4567
+       Connected!!!
+       mpc(4561,0x7ffff1eed3c0) malloc: *** error for object 0x7f911e007600: incorrect checksum for freed object
+       - object was probably modified after being freed.
+       *** set a breakpoint in malloc_error_break to debug
+       ```
+       This error has been resolved by updrading ipopt with
+       ```brew upgrade ipopt --with-openblas```
+       per this [forum post](https://discussions.udacity.com/t/incorrect-checksum-for-freed-object/313433/19).
   * Linux
     * You will need a version of Ipopt 3.12.1 or higher. The version available through `apt-get` is 3.11.x. If you can get that version to work great but if not there's a script `install_ipopt.sh` that will install Ipopt. You just need to download the source from the Ipopt [releases page](https://www.coin-or.org/download/source/Ipopt/) or the [Github releases](https://github.com/coin-or/Ipopt/releases) page.
     * Then call `install_ipopt.sh` with the source directory as the first argument, ex: `sudo bash install_ipopt.sh Ipopt-3.12.1`. 
