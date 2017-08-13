@@ -28,7 +28,7 @@ mkdir -p build && cd build
 make install
 
 # ASL
-cd $srcdir//ThirdParty/ASL
+cd $srcdir/ThirdParty/ASL
 ./get.ASL
 
 # MUMPS
