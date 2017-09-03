@@ -28,6 +28,7 @@ Self-Driving Car Engineer Nanodegree Program
   * Mac: `brew install gcc` (might not be required)
   * Linux: `sudo apt-get install gfortran`. Additionall you have also have to install gcc and g++, `sudo apt-get install gcc g++`. Look in [this Dockerfile](https://github.com/udacity/CarND-MPC-Quizzes/blob/master/Dockerfile) for more info.
 * [Ipopt](https://projects.coin-or.org/Ipopt)
+  * If challenges to installation are encountered (install script fails).  Please review this thread for tips on installing Ipopt.
   * Mac: `brew install ipopt`
        +  Some Mac users have experienced the following error:
        ```
