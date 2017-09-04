@@ -103,13 +103,6 @@ int main() {
           double psi = j[1]["psi"];
           double v = j[1]["speed"];
 
-          /*
-          * TODO: Calculate steering angle and throttle using MPC.
-          *
-          * Both are in between [-1, 1].
-          *
-          */
-
           Eigen::VectorXd ptx(ptsx.size());
           Eigen::VectorXd pty(ptsy.size());
 
@@ -131,7 +124,6 @@ int main() {
 
           double steer_value = vars[0];
           double throttle_value = vars[1];
-          cout <<steer_value <<" " <<throttle_value <<endl;
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.

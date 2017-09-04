@@ -5,24 +5,10 @@
 
 using CppAD::AD;
 
-// TODO: Set N and dt
 size_t N = 10;
 double dt = 0.18;
 
-// This value assumes the model presented in the classroom is used.
-//
-// It was obtained by measuring the radius formed by running the vehicle in the
-// simulator around in a circle with a constant steering angle and velocity on a
-// flat terrain.
-//
-// Lf was tuned until the the radius formed by the simulating the model
-// presented in the classroom matched the previous radius.
-//
-// This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
-
-// NOTE: feel free to play around with this
-// or do something completely different
 double ref_v = 70;
 
 // The solver takes all the state variables and actuator
@@ -47,34 +33,21 @@ AD<double> polyeval(Eigen::VectorXd coeffs, AD<double> x) {
 
 class FG_eval {
 public:
-    Eigen::VectorXd coeffs;
     // Coefficients of the fitted polynomial.
+    Eigen::VectorXd coeffs;
+
     FG_eval(Eigen::VectorXd coeffs, double target_x, double target_y) {
       this->coeffs = coeffs;
     }
 
     typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
+
     // `fg` is a vector containing the cost and constraints.
     // `vars` is a vector containing the variable values (state & actuators).
     void operator()(ADvector& fg, const ADvector& vars) {
       // The cost is stored is the first element of `fg`.
-      // Any additions to the cost should be added to `fg[0]`.
       fg[0] = 0;
 
-      // Reference State Cost
-      // TODO: Define the cost related the reference state and
-      // any anything you think may be beneficial.
-
-      //
-      // Setup Constraints
-      //
-      // NOTE: In this section you'll setup the model constraints.
-
-      // Initial constraints
-      //
-      // We add 1 to each of the starting indices due to cost being located at
-      // index 0 of `fg`.
-      // This bumps up the position of all the other values.
       fg[1 + x_start] = vars[x_start];
       fg[1 + y_start] = vars[y_start];
       fg[1 + psi_start] = vars[psi_start];
@@ -103,28 +76,22 @@ public:
         AD<double> y_fit = polyeval(coeffs, x0);
         AD<double> epsi = CppAD::atan(coeffs[1] + coeffs[2] * 2 * x0 + coeffs[3] * 3 * pow(x0, 2));
 
-        fg[0] += CppAD::pow(cte0, 2) * 2500;
+        // Define cost for the car
+        fg[0] += CppAD::pow(cte0, 2) * 3000;
         fg[0] += CppAD::pow(epsi0, 2) * 750;
-        fg[0] += CppAD::pow(ref_v - v0, 2) * 0.5;
-        fg[0] += CppAD::pow(delta0, 2) * 30;
-        fg[0] += CppAD::pow(a0, 2);
+        fg[0] += CppAD::pow(ref_v - v0, 2) * 0.7;
+        fg[0] += CppAD::pow(delta0, 2) * 50;
+        fg[0] += CppAD::pow(a0, 2) * 30;
 
 
         if (t < N - 1) {
           AD<double> delta1 = vars[delta_start + t];
           AD<double> a1 = vars[a_start + t];
-          fg[0] += CppAD::pow(delta1 - delta0, 2) * 30;
-          fg[0] += CppAD::pow(a1 - a0, 2);
+          fg[0] += CppAD::pow(delta1 - delta0, 2) * 50;
+          fg[0] += CppAD::pow(a1 - a0, 2) * 30;
         }
 
-        // Here's `x` to get you started.
-        // The idea here is to constraint this value to be 0.
-        //
-        // NOTE: The use of `AD<double>` and use of `CppAD`!
-        // This is also CppAD can compute derivatives and pass
-        // these to the solver.
-
-        // TODO: Setup the rest of the model constraints
+        // Setup next state constraints
         fg[1 + x_start + t]    = x1    - (x0 + v0 * CppAD::cos(psi0) * dt);
         fg[1 + y_start + t]    = y1    - (y0 + v0 * CppAD::sin(psi0) * dt);
         fg[1 + psi_start + t]  = psi1  - (psi0 + (v0 / Lf) * delta0 * dt);
@@ -245,8 +212,6 @@ vector<double> MPC::Solve(Eigen::VectorXd x0, Eigen::VectorXd coeffs, double tar
   //
   // Check some of the solution values
   //
-  bool ok = true;
-  ok &= solution.status == CppAD::ipopt::solve_result<Dvector>::success;
 
   auto cost = solution.obj_value;
   std::cout << "Cost " << cost << std::endl;
