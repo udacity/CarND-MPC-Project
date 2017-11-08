@@ -16,6 +16,9 @@ At this point in the curriculum students will have set up their SDC Term 2 envir
       brew tap homebrew/science
       brew install ipopt --with-openblas
     ```
+
+ - **For Linux and Windows Ubuntu BASH** Please note that for any particular command, including execution of ```.sh``` scripts, it may be necessary to add ```sudo``` prior to the command.  It is also a good practice to run ```sudo apt-get update``` prior to installation of new libraries.
+
   * **Linux:**
     * ```sudo apt-get install gfortran```
     *  ```apt-get install unzip```
