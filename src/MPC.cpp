@@ -53,7 +53,7 @@ class FG_eval {
 
       fg[0] += CppAD::pow(vars[ctestart+i]/1,2);
       fg[0] += CppAD::pow(vars[epsistart+i]/2,2);
-      fg[0] += CppAD::pow(10*(vars[vstart+i]-setspeed)/setspeed,2);
+      fg[0] += CppAD::pow((vars[vstart+i]-setspeed)/5,2);
 
     }
     
