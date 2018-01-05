@@ -19,7 +19,7 @@ The code has been developed on a mac with latest MacOS and latest Xcode. The pro
 ### The model
 The controller runs everytime a message from the simulator is received, see line 36 of [main.cpp](src/main.cpp#L36-L145). It first reads all relevant input from the received message. On line 73, it transforms the trajectory to vehicle coordinates via the function unityToCar, which is implemented in [helper_functions.cpp](src/helper_functions.cpp#L54-L64).
 
-An issue with the Eigen library prevents to initialize directly the VectorXd based on the transformed values in next_x_vals, so therefore the loop on [line 76](src/main.cpp#L76).
+An issue with the Eigen library prevents to initialize directly the VectorXd based on the transformed values in next_x_vals, so therefore the loop on [line 76](src/main.cpp#L74-L79).
 
 On line 81, the trajectory is fit with a 3d polynomial, the function itself is implemented in helper_functions.cpp and has been provided in class.
 
@@ -37,10 +37,10 @@ On line 86, the solver is called to find a best solution, see later for an expla
 The solver returns the steer and throttle values, and a list of x/y values of the calculated solution. These are obtained from the answer of the solver, and put in the json message ([lines 87-122](src/main.cpp#L87-L122)).
 To account for actuator delay, a sleep is introduced on line 133. This is parameterized with a constat delay_steps, which is set in [MPC.h](src/MPC.h#L11).
 
-On line 135, the resulting command is send back to the simulator.
+On [lines 135](src/main.cpp#L135), the resulting command is send back to the simulator.
 
 
-### Timestep length and Elepsed Duration
+### Timestep length and Elapsed Duration
 
 ### Polynomial Fitting and MPC Preprocessing
 
