@@ -73,7 +73,7 @@ int main() {
           unityToCar(next_x_vals, next_y_vals, ptsx, ptsy, px, py,psi);
           Eigen::VectorXd xx(next_x_vals.size());
           Eigen::VectorXd yy(next_y_vals.size());
-          for (int i=0;i<next_x_vals.size();++i) {
+          for (size_t i=0;i<next_x_vals.size();++i) {
             xx[i]=next_x_vals[i];
             yy[i]=next_y_vals[i];
           }
@@ -90,7 +90,7 @@ int main() {
           //Always accelerate with max value if driving very slow. THe MPC controller gets unstable at small velocities
 
           if (v<5)throttle_value=1.;
-          for (int i=0;i<N;i++) {
+          for (size_t i=0;i<N;i++) {
             mpc_x_vals.push_back(result[2*i+2]);
             mpc_y_vals.push_back(result[2*i+2+1]);
           }

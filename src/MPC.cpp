@@ -4,9 +4,7 @@
 #include "Eigen-3.3/Eigen/Core"
 #include "helper_functions.hpp"
 
-#include <ctime>
-#include <ratio>
-#include <chrono>
+
 
 using CppAD::AD;
 
@@ -54,7 +52,7 @@ public:
     // set the cost in fg[0]
     fg[0]=0;
     
-    for (int i=0;i<N;i++) {
+    for (size_t i=0;i<N;i++) {
       
       AD<double> x = vars[xstart + i];
       //curvature calculation from https://www.math24.net/curvature-radius/
@@ -73,13 +71,13 @@ public:
       fg[0] += cost_v*CppAD::pow((vars[vstart+i]-setspeed)/v_set,2);
     }
     
-    for (int i = 0; i < N - 1; i++) {
+    for (size_t i = 0; i < N - 1; i++) {
       //Cost for steering
       fg[0] += cost_delta*CppAD::pow(vars[deltastart + i], 2);
       //Cost for accelerating
       fg[0] += cost_a*CppAD::pow(vars[astart + i], 2);
     }
-    for (int i = 0; i < N - 2; i++) {
+    for (size_t i = 0; i < N - 2; i++) {
       //Cost for too fast changing of steering angle
       fg[0] += cost_ddelta*CppAD::pow((vars[deltastart + i + 1] - vars[deltastart + i])/dt, 2);
       //Cost for too fast changing of acceleration
@@ -96,7 +94,7 @@ public:
     
     
     //calculate the values for fg for the following timesteps
-    for (int t = 1; t < N; t++) {
+    for (size_t t = 1; t < N; t++) {
       AD<double> x1 = vars[xstart + t];
       AD<double> y1 = vars[ystart + t];
       AD<double> v1= vars[vstart +t];
@@ -268,7 +266,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
                                         constraints_upperbound, fg_eval, solution);
   
   // calculate the time spent since last solution
-  std::chrono::high_resolution_clock::time_point now=std::chrono::high_resolution_clock::now();
+  std::chrono::time_point<std::chrono::high_resolution_clock> now=std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> delta = now-last;
   last=now;
   
@@ -295,22 +293,22 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   double c_ddelta=0;
   double c_da= 0;
   
-  for (int i=0;i<N;i++) {
+  for (size_t i=0;i<N;i++) {
     c_cte+= cost_cte*std::pow(solution.x[ctestart+i],2);
     c_epsi+= cost_epsi*std::pow(solution.x[epsistart+i],2);
     c_v+= cost_v*std::pow((solution.x[vstart]-setspeed+i)/v_set,2);
   }
-  for (int i=0;i<N-1;i++) {
+  for (size_t i=0;i<N-1;i++) {
     c_delta+=cost_delta*std::pow(solution.x[deltastart+i], 2);
     c_a+= cost_a*std::pow(solution.x[astart+i], 2);
   }
-  for (int i=0;i<N-2;i++){
+  for (size_t i=0;i<N-2;i++){
     c_ddelta+=cost_ddelta*std::pow((solution.x[deltastart + 1+i] - solution.x[deltastart+i])/dt, 2);
     c_da+= cost_da*std::pow((solution.x[astart + 1+i] - solution.x[astart+i])/dt, 2);
   }
   double c_tot=c_cte+c_epsi+c_v+c_delta+c_a+c_ddelta+c_da;
-  //  std::printf("Solution: t=%7.2f c=%6.2f delta=%7.4f a=%7.4f set=%6.2f\n",delta.count(),cost, solution.x[deltastart], solution.x[astart], setspeed);
-  std::printf("Costs: total=%7.2f cte=%7.2f epsi=%7.2f v=%7.2f delta=%7.2f a=%7.2f ddelta=%7.2e da=%7.2e\n",c_tot,c_cte,c_epsi,c_v,c_delta,c_a,c_ddelta,c_da);
+  std::printf("Solution: t=%7.2f c=%6.2f delta=%7.4f a=%7.4f set=%6.2f\n",delta.count(),cost, solution.x[deltastart], solution.x[astart], setspeed);
+//  std::printf("Costs: total=%7.2f cte=%7.2f epsi=%7.2f v=%7.2f delta=%7.2f a=%7.2f ddelta=%7.2e da=%7.2e\n",c_tot,c_cte,c_epsi,c_v,c_delta,c_a,c_ddelta,c_da);
   //  std::printf("%7.2f",delta.count());
   //  for (int i=0;i<N-1;i++) {
   //    std::printf(" %7.4e",solution.x[astart+i]- solution.x[astart+i]);

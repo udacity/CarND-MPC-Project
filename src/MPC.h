@@ -3,6 +3,9 @@
 
 #include <vector>
 #include "Eigen-3.3/Eigen/Core"
+#include <ctime>
+#include <ratio>
+#include <chrono>
 
 // number of timesteps delay. Timestep assumed to be 100 ms.
 const int delay_steps=1;
@@ -23,7 +26,7 @@ class MPC {
   // Return the first actuatotions.
   vector<double> Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs);
 private:
-  std::chrono::high_resolution_clock::time_point last=std::chrono::high_resolution_clock::now();
+  std::chrono::time_point<std::chrono::high_resolution_clock> last=std::chrono::high_resolution_clock::now();
 
 };
 
