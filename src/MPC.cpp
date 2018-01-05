@@ -4,34 +4,32 @@
 #include "Eigen-3.3/Eigen/Core"
 #include "helper_functions.hpp"
 
+#include <ctime>
+#include <ratio>
+#include <chrono>
+
 using CppAD::AD;
 
-// TODO: Set the timestep length and duration
+// Number of timesteps in model
 const size_t N = 10;
+// size of timestep in [s]
 double dt = 0.1;
-const size_t xstart=0*N;
-const size_t ystart=1*N;
-const size_t psistart=2*N;
-const size_t vstart=3*N;
-const size_t ctestart=4*N;
-const size_t epsistart=5*N;
-const size_t deltastart=6*N;
-const size_t astart=6*N + 1*(N-1);
+const size_t xstart=0*N;   // first x position in vars, N in total
+const size_t ystart=1*N;   // first y position in vars, N in total
+const size_t psistart=2*N; // first psi in vars, N in total
+const size_t vstart=3*N;   // first v in vars, N in total
+const size_t ctestart=4*N; // first cte in vars, N in total
+const size_t epsistart=5*N;// first epsi in vars, N in total
+const size_t deltastart=6*N;// first delta in vars, N-1 in total
+const size_t astart=6*N + 1*(N-1); //first a in vars, N-1 in total
 
-
-// This value assumes the model presented in the classroom is used.
-//
-// It was obtained by measuring the radius formed by running the vehicle in the
-// simulator around in a circle with a constant steering angle and velocity on a
-// flat terrain.
-//
-// Lf was tuned until the the radius formed by the simulating the model
-// presented in the classroom matched the previous radius.
-//
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
-const double v_set=50;
-const double set_speed_factor=0;
+// Set speed for straight driving
+const double v_set=70;
+// factor to reduce the set speed, based on curvature of road
+//setspeed=v_set-set_speed_factor*curvature
+const double set_speed_factor=200;
 
 class FG_eval {
  public:
@@ -42,32 +40,47 @@ class FG_eval {
 
   typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
   
+  // fg a vector of the cost constraints
+  // vars is a vector of variable values (state & actuators)
+
   void operator()(ADvector& fg, const ADvector& vars) {
-    // TODO: implement MPC
     
     // set the cost in fg[0]
     fg[0]=0;
 
     for (int i=0;i<N;i++) {
-      AD<double> setspeed=v_set-CppAD::abs( vars[deltastart+i]*set_speed_factor);
+      
+      AD<double> x = vars[xstart + i];
+      //curvature calculation from https://www.math24.net/curvature-radius/
+      AD<double> denom=1+CppAD::pow(coeffs[1] + 2 * coeffs[2] * x+3 * coeffs[3] * CppAD::pow(x, 2),2);
+      AD<double> curve = CppAD::abs(2*coeffs[2]  + 6*coeffs[3] *x) /
+      CppAD::pow(denom,1.5);
+      AD<double> setspeed=v_set-CppAD::abs( curve*set_speed_factor);
 
-      fg[0] += CppAD::pow(vars[ctestart+i]/1,2);
-      fg[0] += CppAD::pow(vars[epsistart+i]/2,2);
-      fg[0] += CppAD::pow((vars[vstart+i]-setspeed)/5,2);
+      
 
+      // Cost for offset from center
+      fg[0] += CppAD::pow(10*vars[ctestart+i],2);
+      // Cost for driving direction
+      fg[0] += CppAD::pow(10*vars[epsistart+i],2);
+      //Cost for speed
+      fg[0] += CppAD::pow(10*(vars[vstart+i]-setspeed)/v_set,2);
     }
     
     for (int i = 0; i < N - 1; i++) {
-      fg[0] += CppAD::pow(vars[deltastart + i]/100., 2);
-      fg[0] += CppAD::pow(vars[astart + i]/1000., 2);
-      // try adding penalty for speed + steer
+      //Cost for steering
+      //fg[0] += CppAD::pow(vars[deltastart + i]/100., 2);
+      //Cost for accelerating
+      //fg[0] += CppAD::pow(vars[astart + i]/1000., 2);
     }
     for (int i = 0; i < N - 2; i++) {
-      fg[0] += CppAD::pow((vars[deltastart + i + 1] - vars[deltastart + i])/.1, 2);
-      fg[0] += CppAD::pow((vars[astart + i + 1] - vars[astart + i])/.01, 2);
+      //Cost for too fast changing of steering angle
+      //fg[0] += CppAD::pow((vars[deltastart + i + 1] - vars[deltastart + i])/dt, 2);
+      //Cost for too fast changing of acceleration
+      fg[0] += CppAD::pow(0.1*(vars[astart + i + 1] - vars[astart + i])/dt, 2);
     }
     
-    
+    //set current values of the dynamic model in fg
     fg[1 + xstart] = vars[xstart];
     fg[1 + ystart] = vars[ystart];
     fg[1 + psistart] = vars[psistart];
@@ -76,7 +89,7 @@ class FG_eval {
     fg[1 + epsistart] = vars[epsistart];
     
     
-    
+    //calculate the values for fg for the following timesteps
     for (int t = 1; t < N; t++) {
       AD<double> x1 = vars[xstart + t];
       AD<double> y1 = vars[ystart + t];
@@ -94,35 +107,37 @@ class FG_eval {
       
       AD<double> delta0;
       AD<double> a0;
-      if (t == 1) {
+      // include drag term proportional to v^2
+      // the parameters have been determined by setting a constant acceleration
+      // and see what the final constant speed is. In this case
+      // 0.416 acceleration gives 48 Mph
+      //
+      // The factor 10 is also phenemological, to have the model
+      // predict a realistic acceleration depending on the acceleration setting
+      if (t < delay_steps) {
         delta0= vars[deltastart +t-1];
-        a0=vars[astart+t-1];
+        a0=10*(vars[astart+t-1]-0.416*v0*v0/48./48.);
+
       } else { // for latency
-        a0 = vars[astart + t - 2];
-        delta0 = vars[deltastart + t - 2];
+        delta0 = vars[deltastart + t - 1-delay_steps];
+        a0=10*(vars[astart+t-1-delay_steps]-0.416*v0*v0/48./48.);
       }
       
-      
+      // calculate the predicted y value of the road
       AD<double> fx0 = coeffs[0] + coeffs[1] * x0 + coeffs[2] * CppAD::pow(x0, 2) + coeffs[3] * CppAD::pow(x0, 3);
+      // calculate the predicted orientation of the road
       AD<double> psides0 = CppAD::atan(coeffs[1] + 2 * coeffs[2] * x0 + 3 * coeffs[3] * CppAD::pow(x0, 2));// atan of the derivative
       
-      // TODO: Setup the rest of the model constraints
+      // Dynamic model X1=f(X0,dt), so X1-f(X0,dt)==0
       fg[1 + xstart + t] = x1 - (x0 + v0 * CppAD::cos(psi0) * dt);
       fg[1 + ystart + t] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
       fg[1 + psistart + t]= psi1 - (psi0  - v0/Lf*delta0*dt);
       fg[1 + vstart + t] = v1 - (v0 + a0 * dt);
-      // include drag term
-      //fg[1 + vstart + t] = v1 - (v0 + (a0-0.4*v0*v0/50./50.) * dt);
 
+      // Offset from center and driving direction
       fg[1 + ctestart +t] = cte1-(fx0 - y0 + v0 * CppAD::sin(epsi0) * dt);
       fg[1 + epsistart +t] = epsi1-(psi0-psides0 - v0 / Lf * delta0 * dt);
     }
-    
-    // `fg` a vector of the cost constraints, `vars` is a vector of variable values (state & actuators)
-    // NOTE: You'll probably go back and forth between this function and
-    // the Solver function below.
-    
-
   }
 };
 
@@ -137,11 +152,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   size_t i;
   typedef CPPAD_TESTVECTOR(double) Dvector;
 
-  // TODO: Set the number of model variables (includes both states and inputs).
-  // For example: If the state is a 4 element vector, the actuators is a 2
-  // element vector and there are 10 timesteps. The number of variables is:
-  //
-  // 6 * N + 2 * (N-1)
+  // Number of vars=6 * N + 2 * (N-1)
   // order is N*x, N*y, N*psi, N*v, N*cte, N*epsi, (N-1)*delta, (N-1)*a
   size_t n_vars = 6*N +2*(N-1);
   // TODO: Set the number of constraints
@@ -159,8 +170,6 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   vars[vstart]=state[3];//v
   vars[ctestart]=state[4];//cte
   vars[epsistart]=state[5];//epsi
-
-  // TODO: Set lower and upper limits for variables.
 
   Dvector vars_lowerbound(n_vars);
   Dvector vars_upperbound(n_vars);
@@ -252,16 +261,34 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
       options, vars, vars_lowerbound, vars_upperbound, constraints_lowerbound,
       constraints_upperbound, fg_eval, solution);
 
+  // calculate the time spent since last solution
+  std::chrono::high_resolution_clock::time_point now=std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double, std::milli> delta = now-last;
+  last=now;
+
   // Check some of the solution values
   ok &= solution.status == CppAD::ipopt::solve_result<Dvector>::success;
 
   // Cost
   auto cost = solution.obj_value;
+  
+  double x = solution.x[xstart];
+  
+  double denom=1+std::pow(coeffs[1] + 2 * coeffs[2] * x+3 * coeffs[3] * CppAD::pow(x, 2),2);
+  double curve = std::abs(2*coeffs[2]  + 6*coeffs[3] *x) /
+  std::pow(denom,1.5);
+  double setspeed=v_set-std::abs( curve*set_speed_factor);
+
   std::cout << "Cost " << cost << std::endl;
   std::cout << "Control: "<< solution.x[deltastart] <<", "<<solution.x[astart]<<std::endl;
   std::cout << "Setspeed: "<<v_set-std::abs(solution.x[deltastart]*set_speed_factor)<<std::endl;
-  //std::cout << "Solution: "<< solution.x <<std::endl;
-
+  std::cout << "Solution: "<< cost<<", "<<solution.x[deltastart] <<", "<<solution.x[astart]<<", "<<setspeed<<std::endl;
+  std::printf("%7.2f",delta.count());
+  //std::printf("Solution: %6.2f %7.4f %7.4f %6.2f\n",cost, solution.x[deltastart], solution.x[astart], setspeed);
+  for (int i=0;i<N-1;i++) {
+    std::printf(" %7.4f",solution.x[astart+i]);
+  };
+  std::cout <<std::endl;
   // TODO: Return the first actuator values. The variables can be accessed with
   // `solution.x[i]`.
   //
@@ -269,6 +296,11 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // creates a 2 element double vector.
   //std::cout <<" Solution size: " << solution.x.size()<<std::endl;
   //std::cout << solution.x<<std::endl;
+  
+  
+  //result[0]=steering angle
+  //result[1]=acceleration
+  //result[2..2+2N] x,y value pairs of predicted path
   vector<double> results(2+2*N);
   results[0]=solution.x[deltastart];
   results[1]=solution.x[astart];
