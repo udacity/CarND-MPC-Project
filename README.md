@@ -55,12 +55,12 @@ The dynamic model is implemented on [line 97-145](src/MPC.cpp#L97-L144). To acco
 2. A factor is added for the drag, proportional to v^2. The actual value has been determined by checking what the speed saturated to for a specific value of the actuator. For an actuation of 0.416, this turned out to be roughly 48 Mph, so that why these values have been choosen. I have observed that at larger speeds, this is not completely correct, so this could be improved, but it is sufficiently accurate to get the motion nicely stable.
 
 The following equations are implemented in lines 136-143:
-* x1=x0+v*cos(psi)*dt
-* y1=y0+v*sin*(psi)*dt
-* psi1=psi0+v/Lf*delta*dt
-* v1=v0+a*dt
-* cte1=(f(x0)-y0)+v*sin(epsi)*dt
-* epsi1=(psi0-g(x0))-v/Lf*delta*dt
+* x1=x0+v\*cos(psi)\*dt
+* y1=y0+v\*sin(psi)\*dt
+* psi1=psi0+v/Lf\*delta\*dt
+* v1=v0+a\*dt
+* cte1=(f(x0)-y0)+v\*sin(epsi)\*dt
+* epsi1=(psi0-g(x0))-v/Lf\*delta\*dt
 
 Here, f(x0) is the y coordinate calculated from the parametetrization at x0. g(x0) is the direction of the road calculated from x0. g(x0) is called psides0 in the code.
 
