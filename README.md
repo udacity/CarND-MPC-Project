@@ -17,7 +17,7 @@ The code has been developed on a mac with latest MacOS and latest Xcode. The pro
 
 ## Implementation
 ### The model
-The controller runs everytime a message from the simulator is received, see line 36 of [main.cpp](src/main.cpp). It first reads all relevant input from the received message. On line 73, it transforms the trajectory to vehicle coordinates via the function unityToCar, which is implemented in [helper_functions.cpp](src/helper_functions.cpp#L54).
+The controller runs everytime a message from the simulator is received, see line 36 of [main.cpp](src/main.cpp#L36-L145). It first reads all relevant input from the received message. On line 73, it transforms the trajectory to vehicle coordinates via the function unityToCar, which is implemented in [helper_functions.cpp](src/helper_functions.cpp#L54-L64).
 
 An issue with the Eigen library prevents to initialize directly the VectorXd based on the transformed values in next_x_vals, so therefore the loop on [line 76](src/main.cpp#L76).
 
