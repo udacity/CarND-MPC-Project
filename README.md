@@ -78,7 +78,7 @@ So therefore, I choose the final options N=10, dt=0.1s, see [MPC.h](src/MPC.h#L1
 The preprocessing and fitting has already been described in the model implememtation section.
 
 ### Model Predictive Control with Latency
-The actual latency is set in MPC.h, so this can be used in [main.c](src/main.c#L133) and MPC.h. In the model, the delay is taken into account by using the actuator values from earlier timesteps, see [lines 121-128](src/MPC.cpp#L121-L128).
+The actual latency is set in MPC.h, so this can be used in [main.cpp](src/main.cpp#L133) and [MPC.cpp lines 121-128](src/MPC.cpp#L121-L128). In the model, the delay is taken into account by using the actuator values from earlier timesteps.
 
 ## Simulation
 ### Vehicle drives a lap successfully
