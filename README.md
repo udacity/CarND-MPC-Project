@@ -67,10 +67,18 @@ Here, f(x0) is the y coordinate calculated from the parametetrization at x0. g(x
 
 
 ### Timestep length and Elapsed Duration
+The number of steps finally choosen is 10, the timestep 0.1 s, so the total time is 1s. Smaller number of steps makes the controller unstable. If have tried e.g. 5 and 8. Especially with 5 steps, it is possible the solution clearly results in a rather strange solution especially at the end, but because not more steps are added, the effect is not resulting in a large enough cost. Maybe with better cost function tuning, less steps might be possible. Many more steps than 10 is not useful, because then the prediction might run off the provided trajectory. Although the fitted function will always give a value, but it is not garanteed (actually, in practise it is not) that extrapolating gives any realistic value.
+
+dt has been tried also with smaller values, but that does not improve the quality, and required more steps, so longer calculation time. I have tried 0.05, but due to the added calculation time, this actually makes the controller more unstable.
+I have also tried larger time steps (0.2s), but that has 2 problems: still at least 10 points are required to keep a realistic prediction and thus the time window becomes 2s, which might lead to running off the trajectory. Secondly, with the artificial delay, the way to componsate is to take a value later in the model prediction. If the delay and timestep are equal, that is easy to do. If these are not synchronized, this would require fitting the model results and finding control values in between the time steps of the solver.
+
+So therefore, I choose the final options N=10, dt=0.1s, see [MPC.h](src/MPC.h#L10-L15).
 
 ### Polynomial Fitting and MPC Preprocessing
+The preprocessing and fitting has already been described in the model implememtation section.
 
 ### Model Predictive Control with Latency
+The actual latency is set in MPC.h, so this can be used in [main.c](src/main.c#L133) and MPC.h. In the model, the delay is taken into account by using the actuator values from earlier timesteps, see [lines 121-128](src/MPC.cpp#L121-L128).
 
 ## Simulation
 ### Vehicle drives a lap successfully
