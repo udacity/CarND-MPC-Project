@@ -10,10 +10,7 @@
 
 using CppAD::AD;
 
-// Number of timesteps in model
-const size_t N = 10;
-// size of timestep in [s]
-double dt = 0.1;
+
 const size_t xstart=0*N;   // first x position in vars, N in total
 const size_t ystart=1*N;   // first y position in vars, N in total
 const size_t psistart=2*N; // first psi in vars, N in total
@@ -23,13 +20,22 @@ const size_t epsistart=5*N;// first epsi in vars, N in total
 const size_t deltastart=6*N;// first delta in vars, N-1 in total
 const size_t astart=6*N + 1*(N-1); //first a in vars, N-1 in total
 
+// Cost factor
+double cost_cte=100;
+double cost_epsi=1000;
+double cost_v=100;
+double cost_delta=1;
+double cost_a=0;
+double cost_ddelta=50;
+double cost_da=200;
+
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
 // Set speed for straight driving
-const double v_set=70;
+const double v_set=50;
 // factor to reduce the set speed, based on curvature of road
 //setspeed=v_set-set_speed_factor*curvature
-const double set_speed_factor=200;
+const double set_speed_factor=100;
 
 class FG_eval {
  public:
@@ -60,24 +66,24 @@ class FG_eval {
       
 
       // Cost for offset from center
-      fg[0] += CppAD::pow(10*vars[ctestart+i],2);
+      fg[0] += cost_cte*CppAD::pow(vars[ctestart+i],2);
       // Cost for driving direction
-      fg[0] += CppAD::pow(10*vars[epsistart+i],2);
+      fg[0] += cost_epsi*CppAD::pow(vars[epsistart+i],2);
       //Cost for speed
-      fg[0] += CppAD::pow(10*(vars[vstart+i]-setspeed)/v_set,2);
+      fg[0] += cost_v*CppAD::pow((vars[vstart+i]-setspeed)/v_set,2);
     }
     
     for (int i = 0; i < N - 1; i++) {
       //Cost for steering
-      //fg[0] += CppAD::pow(vars[deltastart + i]/100., 2);
+      fg[0] += cost_delta*CppAD::pow(vars[deltastart + i], 2);
       //Cost for accelerating
-      //fg[0] += CppAD::pow(vars[astart + i]/1000., 2);
+      fg[0] += cost_a*CppAD::pow(vars[astart + i], 2);
     }
     for (int i = 0; i < N - 2; i++) {
       //Cost for too fast changing of steering angle
-      //fg[0] += CppAD::pow((vars[deltastart + i + 1] - vars[deltastart + i])/dt, 2);
+      fg[0] += cost_ddelta*CppAD::pow((vars[deltastart + i + 1] - vars[deltastart + i])/dt, 2);
       //Cost for too fast changing of acceleration
-      fg[0] += CppAD::pow(0.1*(vars[astart + i + 1] - vars[astart + i])/dt, 2);
+      fg[0] += cost_da*CppAD::pow((vars[astart + i + 1] - vars[astart + i])/dt, 2);
     }
     
     //set current values of the dynamic model in fg
@@ -279,23 +285,38 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   std::pow(denom,1.5);
   double setspeed=v_set-std::abs( curve*set_speed_factor);
 
-  std::cout << "Cost " << cost << std::endl;
-  std::cout << "Control: "<< solution.x[deltastart] <<", "<<solution.x[astart]<<std::endl;
-  std::cout << "Setspeed: "<<v_set-std::abs(solution.x[deltastart]*set_speed_factor)<<std::endl;
-  std::cout << "Solution: "<< cost<<", "<<solution.x[deltastart] <<", "<<solution.x[astart]<<", "<<setspeed<<std::endl;
-  std::printf("%7.2f",delta.count());
-  //std::printf("Solution: %6.2f %7.4f %7.4f %6.2f\n",cost, solution.x[deltastart], solution.x[astart], setspeed);
+  
+  //final costs:
+  double c_cte= 0;
+  double c_epsi= 0;
+  double c_v= 0;
+  double c_delta=0;
+  double c_a= 0;
+  double c_ddelta=0;
+  double c_da= 0;
+  
+  for (int i=0;i<N;i++) {
+  c_cte+= cost_cte*std::pow(solution.x[ctestart+i],2);
+  c_epsi+= cost_epsi*std::pow(solution.x[epsistart+i],2);
+  c_v+= cost_v*std::pow((solution.x[vstart]-setspeed+i)/v_set,2);
+  }
   for (int i=0;i<N-1;i++) {
-    std::printf(" %7.4f",solution.x[astart+i]);
-  };
-  std::cout <<std::endl;
-  // TODO: Return the first actuator values. The variables can be accessed with
-  // `solution.x[i]`.
-  //
-  // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
-  // creates a 2 element double vector.
-  //std::cout <<" Solution size: " << solution.x.size()<<std::endl;
-  //std::cout << solution.x<<std::endl;
+    c_delta+=cost_delta*std::pow(solution.x[deltastart+i], 2);
+    c_a+= cost_a*std::pow(solution.x[astart+i], 2);
+  }
+  for (int i=0;i<N-2;i++){
+   c_ddelta+=cost_ddelta*std::pow((solution.x[deltastart + 1+i] - solution.x[deltastart+i])/dt, 2);
+   c_da+= cost_da*std::pow((solution.x[astart + 1+i] - solution.x[astart+i])/dt, 2);
+  }
+  double c_tot=c_cte+c_epsi+c_v+c_delta+c_a+c_ddelta+c_da;
+//  std::printf("Solution: t=%7.2f c=%6.2f delta=%7.4f a=%7.4f set=%6.2f\n",delta.count(),cost, solution.x[deltastart], solution.x[astart], setspeed);
+  std::printf("Costs: total=%7.2f cte=%7.2f epsi=%7.2f v=%7.2f delta=%7.2f a=%7.2f ddelta=%7.2e da=%7.2e\n",c_tot,c_cte,c_epsi,c_v,c_delta,c_a,c_ddelta,c_da);
+  //  std::printf("%7.2f",delta.count());
+//  for (int i=0;i<N-1;i++) {
+//    std::printf(" %7.4e",solution.x[astart+i]- solution.x[astart+i]);
+//  };
+//  std::cout <<std::endl;
+
   
   
   //result[0]=steering angle

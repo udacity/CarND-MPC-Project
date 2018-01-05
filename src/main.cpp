@@ -89,8 +89,7 @@ int main() {
           
           //Always accelerate with max value if driving very slow. THe MPC controller gets unstable at small velocities
 
-          if (v<15)throttle_value=1.;
-          int N=(result.size()-2)/2;
+          if (v<5)throttle_value=1.;
           for (int i=0;i<N;i++) {
             mpc_x_vals.push_back(result[2*i+2]);
             mpc_y_vals.push_back(result[2*i+2+1]);
