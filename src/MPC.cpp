@@ -20,40 +20,40 @@ const size_t epsistart=5*N;// first epsi in vars, N in total
 const size_t deltastart=6*N;// first delta in vars, N-1 in total
 const size_t astart=6*N + 1*(N-1); //first a in vars, N-1 in total
 
-// Cost factor
-double cost_cte=100;
-double cost_epsi=1000;
-double cost_v=100;
-double cost_delta=1;
-double cost_a=0;
-double cost_ddelta=50;
-double cost_da=200;
+// Cost factors
+double cost_cte=100;//100
+double cost_epsi=1000;//1000
+double cost_v=100;//100
+double cost_delta=1;//1
+double cost_a=0;//0
+double cost_ddelta=50;//50
+double cost_da=200;//200
 
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
 // Set speed for straight driving
-const double v_set=50;
+const double v_set=60;
 // factor to reduce the set speed, based on curvature of road
 //setspeed=v_set-set_speed_factor*curvature
 const double set_speed_factor=100;
 
 class FG_eval {
- public:
+public:
   // Fitted polynomial coefficients
   Eigen::VectorXd coeffs;
   FG_eval(Eigen::VectorXd coeffs) { this->coeffs = coeffs; }
-
-
+  
+  
   typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
   
   // fg a vector of the cost constraints
   // vars is a vector of variable values (state & actuators)
-
+  
   void operator()(ADvector& fg, const ADvector& vars) {
     
     // set the cost in fg[0]
     fg[0]=0;
-
+    
     for (int i=0;i<N;i++) {
       
       AD<double> x = vars[xstart + i];
@@ -62,9 +62,9 @@ class FG_eval {
       AD<double> curve = CppAD::abs(2*coeffs[2]  + 6*coeffs[3] *x) /
       CppAD::pow(denom,1.5);
       AD<double> setspeed=v_set-CppAD::abs( curve*set_speed_factor);
-
       
-
+      
+      
       // Cost for offset from center
       fg[0] += cost_cte*CppAD::pow(vars[ctestart+i],2);
       // Cost for driving direction
@@ -103,7 +103,7 @@ class FG_eval {
       AD<double> psi1 = vars[psistart +t];
       AD<double> cte1= vars[ctestart +t];
       AD<double> epsi1=vars[epsistart+t];
-
+      
       AD<double> x0 = vars[xstart + t -1];
       AD<double> y0 = vars[ystart + t-1];
       AD<double> v0= vars[vstart +t-1];
@@ -120,12 +120,12 @@ class FG_eval {
       //
       // The factor 10 is also phenemological, to have the model
       // predict a realistic acceleration depending on the acceleration setting
-      if (t < delay_steps) {
-        delta0= vars[deltastart +t-1];
-        a0=10*(vars[astart+t-1]-0.416*v0*v0/48./48.);
-
+      if (t <= delay_steps) {
+        delta0= vars[deltastart];
+        a0=10*(vars[astart]-0.416*v0*v0/48./48.);
+        
       } else { // for latency
-        delta0 = vars[deltastart + t - 1-delay_steps];
+        delta0 = vars[deltastart + t - 1 - delay_steps];
         a0=10*(vars[astart+t-1-delay_steps]-0.416*v0*v0/48./48.);
       }
       
@@ -139,7 +139,7 @@ class FG_eval {
       fg[1 + ystart + t] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
       fg[1 + psistart + t]= psi1 - (psi0  - v0/Lf*delta0*dt);
       fg[1 + vstart + t] = v1 - (v0 + a0 * dt);
-
+      
       // Offset from center and driving direction
       fg[1 + ctestart +t] = cte1-(fx0 - y0 + v0 * CppAD::sin(epsi0) * dt);
       fg[1 + epsistart +t] = epsi1-(psi0-psides0 - v0 / Lf * delta0 * dt);
@@ -157,13 +157,13 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   bool ok = true;
   size_t i;
   typedef CPPAD_TESTVECTOR(double) Dvector;
-
+  
   // Number of vars=6 * N + 2 * (N-1)
   // order is N*x, N*y, N*psi, N*v, N*cte, N*epsi, (N-1)*delta, (N-1)*a
   size_t n_vars = 6*N +2*(N-1);
   // TODO: Set the number of constraints
   size_t n_constraints = 6*N;
-
+  
   // Initial value of the independent variables.
   // SHOULD BE 0 besides initial state.
   Dvector vars(n_vars);
@@ -176,7 +176,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   vars[vstart]=state[3];//v
   vars[ctestart]=state[4];//cte
   vars[epsistart]=state[5];//epsi
-
+  
   Dvector vars_lowerbound(n_vars);
   Dvector vars_upperbound(n_vars);
   for( i=xstart;i<xstart+N;++i) { //x
@@ -195,17 +195,17 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     vars_lowerbound[i]=-1E6;
     vars_upperbound[i]=1E6;
   }
-
+  
   for( i=ctestart;i<ctestart+N;++i) { //cte
     vars_lowerbound[i]=-1E6;
     vars_upperbound[i]=1E6;
   }
-
+  
   for( i=epsistart;i<epsistart+N;++i) { //epsi
     vars_lowerbound[i]=-1E6;
     vars_upperbound[i]=1E6;
   }
-
+  
   for( i=astart;i<astart+N-1;++i) { //a
     vars_lowerbound[i]=-1;
     vars_upperbound[i]=1;
@@ -214,7 +214,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     vars_lowerbound[i]=-deg2rad(25);
     vars_upperbound[i]=deg2rad(25);
   }
-
+  
   // Lower and upper limits for the constraints
   // Should be 0 besides initial state.
   Dvector constraints_lowerbound(n_constraints);
@@ -237,10 +237,10 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   constraints_upperbound[vstart] = state[3];
   constraints_upperbound[ctestart] = state[4];
   constraints_upperbound[epsistart] = state[5];
-
+  
   // object that computes objective and constraints
   FG_eval fg_eval(coeffs);
-
+  
   //
   // NOTE: You don't have to worry about these options
   //
@@ -258,23 +258,23 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // NOTE: Currently the solver has a maximum time limit of 0.5 seconds.
   // Change this as you see fit.
   options += "Numeric max_cpu_time          0.5\n";
-
+  
   // place to return solution
   CppAD::ipopt::solve_result<Dvector> solution;
-
+  
   // solve the problem
   CppAD::ipopt::solve<Dvector, FG_eval>(
-      options, vars, vars_lowerbound, vars_upperbound, constraints_lowerbound,
-      constraints_upperbound, fg_eval, solution);
-
+                                        options, vars, vars_lowerbound, vars_upperbound, constraints_lowerbound,
+                                        constraints_upperbound, fg_eval, solution);
+  
   // calculate the time spent since last solution
   std::chrono::high_resolution_clock::time_point now=std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> delta = now-last;
   last=now;
-
+  
   // Check some of the solution values
   ok &= solution.status == CppAD::ipopt::solve_result<Dvector>::success;
-
+  
   // Cost
   auto cost = solution.obj_value;
   
@@ -284,7 +284,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   double curve = std::abs(2*coeffs[2]  + 6*coeffs[3] *x) /
   std::pow(denom,1.5);
   double setspeed=v_set-std::abs( curve*set_speed_factor);
-
+  
   
   //final costs:
   double c_cte= 0;
@@ -296,27 +296,27 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   double c_da= 0;
   
   for (int i=0;i<N;i++) {
-  c_cte+= cost_cte*std::pow(solution.x[ctestart+i],2);
-  c_epsi+= cost_epsi*std::pow(solution.x[epsistart+i],2);
-  c_v+= cost_v*std::pow((solution.x[vstart]-setspeed+i)/v_set,2);
+    c_cte+= cost_cte*std::pow(solution.x[ctestart+i],2);
+    c_epsi+= cost_epsi*std::pow(solution.x[epsistart+i],2);
+    c_v+= cost_v*std::pow((solution.x[vstart]-setspeed+i)/v_set,2);
   }
   for (int i=0;i<N-1;i++) {
     c_delta+=cost_delta*std::pow(solution.x[deltastart+i], 2);
     c_a+= cost_a*std::pow(solution.x[astart+i], 2);
   }
   for (int i=0;i<N-2;i++){
-   c_ddelta+=cost_ddelta*std::pow((solution.x[deltastart + 1+i] - solution.x[deltastart+i])/dt, 2);
-   c_da+= cost_da*std::pow((solution.x[astart + 1+i] - solution.x[astart+i])/dt, 2);
+    c_ddelta+=cost_ddelta*std::pow((solution.x[deltastart + 1+i] - solution.x[deltastart+i])/dt, 2);
+    c_da+= cost_da*std::pow((solution.x[astart + 1+i] - solution.x[astart+i])/dt, 2);
   }
   double c_tot=c_cte+c_epsi+c_v+c_delta+c_a+c_ddelta+c_da;
-//  std::printf("Solution: t=%7.2f c=%6.2f delta=%7.4f a=%7.4f set=%6.2f\n",delta.count(),cost, solution.x[deltastart], solution.x[astart], setspeed);
+  //  std::printf("Solution: t=%7.2f c=%6.2f delta=%7.4f a=%7.4f set=%6.2f\n",delta.count(),cost, solution.x[deltastart], solution.x[astart], setspeed);
   std::printf("Costs: total=%7.2f cte=%7.2f epsi=%7.2f v=%7.2f delta=%7.2f a=%7.2f ddelta=%7.2e da=%7.2e\n",c_tot,c_cte,c_epsi,c_v,c_delta,c_a,c_ddelta,c_da);
   //  std::printf("%7.2f",delta.count());
-//  for (int i=0;i<N-1;i++) {
-//    std::printf(" %7.4e",solution.x[astart+i]- solution.x[astart+i]);
-//  };
-//  std::cout <<std::endl;
-
+  //  for (int i=0;i<N-1;i++) {
+  //    std::printf(" %7.4e",solution.x[astart+i]- solution.x[astart+i]);
+  //  };
+  //  std::cout <<std::endl;
+  
   
   
   //result[0]=steering angle

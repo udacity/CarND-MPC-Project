@@ -5,7 +5,7 @@
 #include "Eigen-3.3/Eigen/Core"
 
 // number of timesteps delay. Timestep assumed to be 100 ms.
-const int delay_steps=0;
+const int delay_steps=1;
 // Number of timesteps in model
 const size_t N = 10;
 // size of timestep in [s]
