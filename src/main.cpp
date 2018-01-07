@@ -130,7 +130,7 @@ int main() {
           //
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
-          this_thread::sleep_for(delay_steps*chrono::milliseconds(100));
+          this_thread::sleep_for((delay_steps>0)*chrono::milliseconds(100));
           
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
           
