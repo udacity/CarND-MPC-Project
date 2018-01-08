@@ -3,6 +3,8 @@
 #include <cppad/ipopt/solve.hpp>
 #include "Eigen-3.3/Eigen/Core"
 #include "helper_functions.hpp"
+#include <chrono>
+#include <thread>
 
 
 
@@ -21,19 +23,16 @@ const size_t astart=6*N + 1*(N-1); //first a in vars, N-1 in total
 // Cost factors
 double cost_cte=100;//100
 double cost_epsi=1000;//1000
-double cost_v=100;//100
-double cost_delta=1;//1
+double cost_v=1000;//100
+double cost_delta=0;//1
 double cost_a=0;//0
-double cost_ddelta=50;//50
-double cost_da=200;//200
+double cost_ddelta=0;//50
+double cost_da=00;//200
 
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
 // Set speed for straight driving
-const double v_set=60;
-// factor to reduce the set speed, based on curvature of road
-//setspeed=v_set-set_speed_factor*curvature
-const double set_speed_factor=100;
+
 
 class FG_eval {
 public:
@@ -118,14 +117,10 @@ public:
       //
       // The factor 10 is also phenemological, to have the model
       // predict a realistic acceleration depending on the acceleration setting
-      if (t <= delay_steps) {
-        delta0= vars[deltastart];
-        a0=10*(vars[astart]-0.416*v0*v0/48./48.);
+      delta0= vars[deltastart];
+      a0=1*(vars[astart]-0.416*v0*v0/48./48./MPH_mps/MPH_mps);
         
-      } else { // for latency
-        delta0 = vars[deltastart + t - 1 - delay_steps];
-        a0=10*(vars[astart+t-1-delay_steps]-0.416*v0*v0/48./48.);
-      }
+ 
       
       // calculate the predicted y value of the road
       AD<double> fx0 = coeffs[0] + coeffs[1] * x0 + coeffs[2] * CppAD::pow(x0, 2) + coeffs[3] * CppAD::pow(x0, 3);
@@ -135,12 +130,12 @@ public:
       // Dynamic model X1=f(X0,dt), so X1-f(X0,dt)==0
       fg[1 + xstart + t] = x1 - (x0 + v0 * CppAD::cos(psi0) * dt);
       fg[1 + ystart + t] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
-      fg[1 + psistart + t]= psi1 - (psi0  - v0/Lf*delta0*dt);
+      fg[1 + psistart + t]= psi1 - (psi0  + v0/Lf*delta0*dt);
       fg[1 + vstart + t] = v1 - (v0 + a0 * dt);
       
       // Offset from center and driving direction
       fg[1 + ctestart +t] = cte1-(fx0 - y0 + v0 * CppAD::sin(epsi0) * dt);
-      fg[1 + epsistart +t] = epsi1-(psi0-psides0 - v0 / Lf * delta0 * dt);
+      fg[1 + epsistart +t] = epsi1-(psides0-psi0 + v0 / Lf * delta0 * dt);
     }
   }
 };
@@ -152,6 +147,8 @@ MPC::MPC() {}
 MPC::~MPC() {}
 
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
+  std::chrono::time_point<std::chrono::high_resolution_clock> start=std::chrono::high_resolution_clock::now();
+
   bool ok = true;
   size_t i;
   typedef CPPAD_TESTVECTOR(double) Dvector;
@@ -168,12 +165,24 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   for ( i = 0; i < n_vars; i++) {
     vars[i] = 0;
   }
-  vars[xstart]=state[0];//x
-  vars[ystart]=state[1];//y
-  vars[psistart]=state[2];//psi
-  vars[vstart]=state[3];//v
-  vars[ctestart]=state[4];//cte
-  vars[epsistart]=state[5];//epsi
+  double x=state[0];
+  double y=state[1];
+  double psi=state[2];
+  double v=state[3]*MPH_mps;
+  double cte=state[4];
+  double epsi=state[5];
+  double delta=-state[6]*deg2rad(25);
+  double a=state[7]*10 -0.416*v*v/48./48./MPH_mps/MPH_mps;
+  
+  double fx = coeffs[0] + coeffs[1] * x + coeffs[2] * x*x + coeffs[3] * x*x*x;
+  double psides = std::atan(coeffs[1] + 2 * coeffs[2] * x + 3 * coeffs[3] * x*x);
+  
+  vars[xstart]=x + v * std::cos(psi) * delay_t;//x
+  vars[ystart]=y + v * std::sin(psi) * delay_t;//y
+  vars[psistart]= psi  + v/Lf*delta*delay_t;//psi
+  vars[vstart]=v + a * delay_t;//v
+  vars[ctestart]=cte+(fx-y)+v * std::sin(epsi) * delay_t;//cte
+  vars[epsistart]=epsi + (psi-psides)+v / Lf * delta * delay_t;//epsi
   
   Dvector vars_lowerbound(n_vars);
   Dvector vars_upperbound(n_vars);
@@ -205,8 +214,8 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   }
   
   for( i=astart;i<astart+N-1;++i) { //a
-    vars_lowerbound[i]=-1;
-    vars_upperbound[i]=1;
+    vars_lowerbound[i]=-10;
+    vars_upperbound[i]=10;
   }
   for( i=deltastart;i<deltastart+N-1;++i) { //delta
     vars_lowerbound[i]=-deg2rad(25);
@@ -222,19 +231,19 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     constraints_upperbound[i] = 0;
   }
   
-  constraints_lowerbound[xstart] = state[0];
-  constraints_lowerbound[ystart] = state[1];
-  constraints_lowerbound[psistart] = state[2];
-  constraints_lowerbound[vstart] = state[3];
-  constraints_lowerbound[ctestart] = state[4];
-  constraints_lowerbound[epsistart] = state[5];
+  constraints_lowerbound[xstart] = vars[xstart];
+  constraints_lowerbound[ystart] = vars[ystart];
+  constraints_lowerbound[psistart] = vars[psistart];
+  constraints_lowerbound[vstart] = vars[vstart];
+  constraints_lowerbound[ctestart] = vars[ctestart];
+  constraints_lowerbound[epsistart] = vars[epsistart];
   
-  constraints_upperbound[xstart] = state[0];
-  constraints_upperbound[ystart] = state[1];
-  constraints_upperbound[psistart] = state[2];
-  constraints_upperbound[vstart] = state[3];
-  constraints_upperbound[ctestart] = state[4];
-  constraints_upperbound[epsistart] = state[5];
+  constraints_upperbound[xstart] = vars[xstart];
+  constraints_upperbound[ystart] = vars[ystart];
+  constraints_upperbound[psistart] = vars[psistart];
+  constraints_upperbound[vstart] = vars[vstart];
+  constraints_upperbound[ctestart] = vars[ctestart];
+  constraints_upperbound[epsistart] = vars[epsistart];
   
   // object that computes objective and constraints
   FG_eval fg_eval(coeffs);
@@ -267,7 +276,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   
   // calculate the time spent since last solution
   std::chrono::time_point<std::chrono::high_resolution_clock> now=std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double, std::milli> delta = now-last;
+  std::chrono::duration<double, std::milli> tdelta = now-last;
   last=now;
   
   // Check some of the solution values
@@ -276,7 +285,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // Cost
   auto cost = solution.obj_value;
   
-  double x = solution.x[xstart];
+  x = solution.x[xstart];
   
   double denom=1+std::pow(coeffs[1] + 2 * coeffs[2] * x+3 * coeffs[3] * CppAD::pow(x, 2),2);
   double curve = std::abs(2*coeffs[2]  + 6*coeffs[3] *x) /
@@ -296,7 +305,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   for (size_t i=0;i<N;i++) {
     c_cte+= cost_cte*std::pow(solution.x[ctestart+i],2);
     c_epsi+= cost_epsi*std::pow(solution.x[epsistart+i],2);
-    c_v+= cost_v*std::pow((solution.x[vstart]-setspeed+i)/v_set,2);
+    c_v+= cost_v*std::pow((solution.x[vstart+i]-setspeed)/v_set,2);
   }
   for (size_t i=0;i<N-1;i++) {
     c_delta+=cost_delta*std::pow(solution.x[deltastart+i], 2);
@@ -307,9 +316,9 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     c_da+= cost_da*std::pow((solution.x[astart + 1+i] - solution.x[astart+i])/dt, 2);
   }
   double c_tot=c_cte+c_epsi+c_v+c_delta+c_a+c_ddelta+c_da;
-  std::printf("Solution: t=%7.2f c=%6.2f delta=%7.4f a=%7.4f set=%6.2f\n",delta.count(),cost, solution.x[deltastart], solution.x[astart], setspeed);
-//  std::printf("Costs: total=%7.2f cte=%7.2f epsi=%7.2f v=%7.2f delta=%7.2f a=%7.2f ddelta=%7.2e da=%7.2e\n",c_tot,c_cte,c_epsi,c_v,c_delta,c_a,c_ddelta,c_da);
-  //  std::printf("%7.2f",delta.count());
+  if (print_solution)std::printf("Solution: t=%7.2f c=%6.2f delta=%7.4f a=%7.4f set=%6.2f\n",tdelta.count(),cost, solution.x[deltastart], solution.x[astart], setspeed/MPH_mps);
+  if (print_cost)std::printf("Costs: total=%7.2f cte=%7.2f epsi=%7.2f v=%7.2f delta=%7.2f a=%7.2f ddelta=%7.2e da=%7.2e\n",c_tot,c_cte,c_epsi,c_v,c_delta,c_a,c_ddelta,c_da);
+  //  std::printf("%7.2f",tdelta.count());
   //  for (int i=0;i<N-1;i++) {
   //    std::printf(" %7.4e",solution.x[astart+i]- solution.x[astart+i]);
   //  };
@@ -321,11 +330,20 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   //result[1]=acceleration
   //result[2..2+2N] x,y value pairs of predicted path
   vector<double> results(2+2*N);
-  results[0]=solution.x[deltastart];
-  results[1]=solution.x[astart];
+  results[0]=-solution.x[deltastart]/deg2rad(25);
+  results[1]=solution.x[astart]/10;
   for (i=0;i<N;i++) {
     results[2+2*i]=solution.x[xstart+i];
     results[2+2*i+1]=solution.x[ystart+i];
   }
+  std::chrono::time_point<std::chrono::high_resolution_clock> end=std::chrono::high_resolution_clock::now();
+   tdelta = end-start;
+  if (tdelta.count()<calc_time) {
+    int sleep=calc_time-tdelta.count();
+//    std::cout <<sleep<<endl;
+    std::this_thread::sleep_for(std::chrono::milliseconds(sleep));
+
+  }
+
   return results;
 }

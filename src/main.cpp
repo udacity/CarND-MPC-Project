@@ -34,7 +34,9 @@ int main() {
   // MPC is initialized here!
   MPC mpc;
   int counter=0;
-  h.onMessage([&mpc, &counter](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+  double prev_a=0;
+  double prev_delta=0;
+  h.onMessage([&mpc, &counter, &prev_a, &prev_delta](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                                uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -79,14 +81,16 @@ int main() {
           }
           
           Eigen::VectorXd coef=polyfit(xx,yy,3);
-          double cte=polyeval(coef, 0);
-          double epsi = -std::atan(coef[1]);
-          Eigen::VectorXd state(6); //x, y, psi, v, cte, epsi
-          state << 0, 0, 0, v,cte,epsi;
+          double cte=coef[0];
+          double epsi = std::atan(coef[1]);
+          Eigen::VectorXd state(8); //x, y, psi, v, cte, epsi
+          state << 0, 0, 0, v,cte,epsi,prev_delta,prev_a;
           vector<double> result=mpc.Solve(state, coef);
-          double steer_value=result[0]/deg2rad(25);
+          double steer_value=result[0];
           double throttle_value=result[1];
-          
+          prev_delta=result[0];
+          prev_a=result[1];
+
           //Always accelerate with max value if driving very slow. THe MPC controller gets unstable at small velocities
 
           if (v<5)throttle_value=1.;
@@ -130,7 +134,7 @@ int main() {
           //
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
-          this_thread::sleep_for((delay_steps>0)*chrono::milliseconds(100));
+          this_thread::sleep_for(chrono::milliseconds(delay));
           
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
           
