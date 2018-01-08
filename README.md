@@ -1,108 +1,86 @@
-# CarND-Controls-MPC
-Self-Driving Car Engineer Nanodegree Program
+# CarND MPC Project
+Author: *Igor Passchier*
 
----
+Email: *igor.passchier@tassinternational.com*
 
-## Dependencies
+## Introduction
+This Readme follows the rubric of the project, which can be found at [here](https://review.udacity.com/#!/rubrics/896/view)
 
-* cmake >= 3.5
- * All OSes: [click here for installation instructions](https://cmake.org/install/)
-* make >= 4.1(mac, linux), 3.81(Windows)
-  * Linux: make is installed by default on most Linux distros
-  * Mac: [install Xcode command line tools to get make](https://developer.apple.com/xcode/features/)
-  * Windows: [Click here for installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
-* gcc/g++ >= 5.4
-  * Linux: gcc / g++ is installed by default on most Linux distros
-  * Mac: same deal as make - [install Xcode command line tools]((https://developer.apple.com/xcode/features/)
-  * Windows: recommend using [MinGW](http://www.mingw.org/)
-* [uWebSockets](https://github.com/uWebSockets/uWebSockets)
-  * Run either `install-mac.sh` or `install-ubuntu.sh`.
-  * If you install from source, checkout to commit `e94b6e1`, i.e.
-    ```
-    git clone https://github.com/uWebSockets/uWebSockets
-    cd uWebSockets
-    git checkout e94b6e1
-    ```
-    Some function signatures have changed in v0.14.x. See [this PR](https://github.com/udacity/CarND-MPC-Project/pull/3) for more details.
+## Compilation
+### Your code should compile
+The code has been developed on a mac with latest MacOS and latest Xcode. The program can be compiled and run when all dependencies are met via:
+* mkdir build
+* cd build
+* cmake ..
+* make
+* ./mpc
 
-* **Ipopt and CppAD:** Please refer to [this document](https://github.com/udacity/CarND-MPC-Project/blob/master/install_Ipopt_CppAD.md) for installation instructions.
-* [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page). This is already part of the repo so you shouldn't have to worry about it.
-* Simulator. You can download these from the [releases tab](https://github.com/udacity/self-driving-car-sim/releases).
-* Not a dependency but read the [DATA.md](./DATA.md) for a description of the data sent back from the simulator.
+## Implementation
+### The model
+The controller runs everytime a message from the simulator is received, see line 36 of [main.cpp](src/main.cpp#L36-L145). It first reads all relevant input from the received message. On line 73, it transforms the trajectory to vehicle coordinates via the function unityToCar, which is implemented in [helper_functions.cpp](src/helper_functions.cpp#L54-L64).
+
+An issue with the Eigen library prevents to initialize directly the VectorXd based on the transformed values in next_x_vals, so therefore the loop on [line 76](src/main.cpp#L74-L79).
+
+On line 81, the trajectory is fit with a 3d polynomial, the function itself is implemented in helper_functions.cpp and has been provided in class.
+
+The state of the vehicles consists of:
+* x (x position in car coordinates)
+* y (y position in car coordinates)
+* psi (driving angle in car coordinates)
+* v (velocity of the car)
+* cte (offset in y-direction with respect to reference trajectory)
+* epsi (angular offset wit respect to the reference trajectory)
+As all are calculated in vehicle coordinates, the first 3 are 0, v is given from the message, and cte and epsi are obtained from the fit of the reference trajectory in vehicle coordinates.
+
+On line 86, the solver is called to find a best solution, see later for an explanation of the solver.
+
+The solver returns the steer and throttle values, and a list of x/y values of the calculated solution. These are obtained from the answer of the solver, and put in the json message ([lines 87-122](src/main.cpp#L87-L122)).
+To account for actuator delay, a sleep is introduced on line 133. This is parameterized with a constat delay_steps, which is set in [MPC.h](src/MPC.h#L11).
+
+On [lines 135](src/main.cpp#L135), the resulting command is send back to the simulator.
+
+The MPC model and solver are implemented in [MPC.cpp](src/MPC.cpp). The variables are initialized and the constrain limits are defined in [MPC::Solve](src/MPC.cpp#L154-L331). The state consists of 6 variables, resulting in 6N parameters, and 2 actuators, resulting in 2*(N-1) parameters. The constraints are based on all state variables on all steps, so also 6N constraints. These values are set in [line 159-163](src/MPC.cpp#L159-L163). All variables are initilized to 0, except for the first that are set to the current state (line 167-176). The bounds are effectively completely open for the state variables (line 180-205), and limited to -1..1 for a and -25deg..25 deg for delta (line 207-214).
+
+All constraints are defined such that they should be 0, expect for the inital states. These bounds are specified in line 218-237. After setting all options, the solver is called in [line 264](src/MPC.cpp#L264-L265). Based on the solution, the inidividual contributions to the cost and some other parameters are calculated and printed for debugging (line 279-316).
+
+The actuator values and the path are stored in a return vector and returned to the main loop(line 323-330).
+
+The actual dynamic model is implemented in [FG_eval operator ()](src/MPC.cpp#L38-L146). The cost function is fg[0] and loops over all timesteps. The setspeed is depending on the curvature of the road. Initially I tried to make it depending on the steering angle, but that results in a less stable controller. The curvature is calculated from the parametrization of the road in [line 57-62](src/MPC.cpp#L57-L62). This function is based on a formula from https://www.math24.net/curvature-radius/ :K=abs(y'')/(1+y'^2)^(3/2). 
+
+The cost function is based on a cost related to cte, epsi, v, delta, a, and the derivatives of delta and a, and is calculated in lines 66-85. The relative weight is controlled by constants, that are set on line 21-22. the cost contributions of cte and epsi have been tuned to be from the same size of magnitude, the speed contribution some what smaller. To stabilize the controller, a cost is added related to the steering angle. To stabilize in case of a delay, the two terms related to the derivatives are added. If only a smaller change is allowed, the effect of the delay is less. A cost related to a is not really necessary, as that does not influence the performance. Of course, if it was a real car, it would be more comfortable to add some cost to the acceleration itself as well.
+
+The dynamic model is implemented on [line 97-145](src/MPC.cpp#L97-L144). To account for the actuator delay, the actuator values of an earlier step is taken (line 121-128). Two changes have been made compared to the dynamic model described in the lessons.
+
+1. An additional factor 10 is added to the actual actuator setting. It is unclear what the conversion factor from the actuator setting and the actual acceleration si. The factor 10 gave a good result.
+2. A factor is added for the drag, proportional to v^2. The actual value has been determined by checking what the speed saturated to for a specific value of the actuator. For an actuation of 0.416, this turned out to be roughly 48 Mph, so that why these values have been choosen. I have observed that at larger speeds, this is not completely correct, so this could be improved, but it is sufficiently accurate to get the motion nicely stable.
+
+The following equations are implemented in lines 136-143:
+* x1=x0+v\*cos(psi)\*dt
+* y1=y0+v\*sin(psi)\*dt
+* psi1=psi0+v/Lf\*delta\*dt
+* v1=v0+a\*dt
+* cte1=(f(x0)-y0)+v\*sin(epsi)\*dt
+* epsi1=(psi0-g(x0))-v/Lf\*delta\*dt
+
+Here, f(x0) is the y coordinate calculated from the parametetrization at x0. g(x0) is the direction of the road calculated from x0. g(x0) is called psides0 in the code.
 
 
-## Basic Build Instructions
 
-1. Clone this repo.
-2. Make a build directory: `mkdir build && cd build`
-3. Compile: `cmake .. && make`
-4. Run it: `./mpc`.
+### Timestep length and Elapsed Duration
+The number of steps finally choosen is 10, the timestep 0.1 s, so the total time is 1s. Smaller number of steps makes the controller unstable. If have tried e.g. 5 and 8. Especially with 5 steps, it is possible the solution clearly results in a rather strange solution especially at the end, but because not more steps are added, the effect is not resulting in a large enough cost. Maybe with better cost function tuning, less steps might be possible. Many more steps than 10 is not useful, because then the prediction might run off the provided trajectory. Although the fitted function will always give a value, but it is not garanteed (actually, in practise it is not) that extrapolating gives any realistic value.
 
-## Tips
+dt has been tried also with smaller values, but that does not improve the quality, and required more steps, so longer calculation time. I have tried 0.05, but due to the added calculation time, this actually makes the controller more unstable.
+I have also tried larger time steps (0.2s), but that has 2 problems: still at least 10 points are required to keep a realistic prediction and thus the time window becomes 2s, which might lead to running off the trajectory. Secondly, with the artificial delay, the way to componsate is to take a value later in the model prediction. If the delay and timestep are equal, that is easy to do. If these are not synchronized, this would require fitting the model results and finding control values in between the time steps of the solver.
 
-1. It's recommended to test the MPC on basic examples to see if your implementation behaves as desired. One possible example
-is the vehicle starting offset of a straight line (reference). If the MPC implementation is correct, after some number of timesteps
-(not too many) it should find and track the reference line.
-2. The `lake_track_waypoints.csv` file has the waypoints of the lake track. You could use this to fit polynomials and points and see of how well your model tracks curve. NOTE: This file might be not completely in sync with the simulator so your solution should NOT depend on it.
-3. For visualization this C++ [matplotlib wrapper](https://github.com/lava/matplotlib-cpp) could be helpful.)
-4.  Tips for setting up your environment are available [here](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/f758c44c-5e40-4e01-93b5-1a82aa4e044f/concepts/23d376c7-0195-4276-bdf0-e02f1f3c665d)
-5. **VM Latency:** Some students have reported differences in behavior using VM's ostensibly a result of latency.  Please let us know if issues arise as a result of a VM environment.
+So therefore, I choose the final options N=10, dt=0.1s, see [MPC.h](src/MPC.h#L10-L15).
 
-## Editor Settings
+### Polynomial Fitting and MPC Preprocessing
+The preprocessing and fitting has already been described in the model implememtation section.
 
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
+### Model Predictive Control with Latency
+The actual latency is set in MPC.h, so this can be used in [main.cpp](src/main.cpp#L133) and [MPC.cpp lines 121-128](src/MPC.cpp#L121-L128). In the model, the delay is taken into account by using the actuator values from earlier timesteps.
 
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
+## Simulation
+### Vehicle drives a lap successfully
+With the provided code and the term2 simulator, the car drives one and more laps successfully.
 
-## Code Style
-
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
-
-## Project Instructions and Rubric
-
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
-
-More information is only accessible by people who are already enrolled in Term 2
-of CarND. If you are enrolled, see [the project page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/f1820894-8322-4bb3-81aa-b26b3c6dcbaf/lessons/b1ff3be0-c904-438e-aad3-2b5379f0e0c3/concepts/1a2255a0-e23c-44cf-8d41-39b8a3c8264a)
-for instructions and the project rubric.
-
-## Hints!
-
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
-
-## Call for IDE Profiles Pull Requests
-
-Help your fellow students!
-
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to we ensure
-that students don't feel pressured to use one IDE or another.
-
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
-
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
