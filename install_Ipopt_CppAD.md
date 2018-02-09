@@ -12,13 +12,8 @@ At this point in the curriculum students will have set up their SDC Term 2 envir
 
 * [Ipopt](https://projects.coin-or.org/Ipopt)
   * **Mac:**
-  The homebrew/science repository was recently deprecated, leading to the updated versions of homebrew being unable to appropriately install `ipopt`. Therefore, you may need to revert homebrew/science prior to installing `ipopt`.
-    * First, navigate to the director containing homebrew/science, e.g. `/usr/local/Homebrew/Library/Taps/homebrew/homebrew-science` (this may differ depending on your machine).
-    * Next, `git checkout 19f75951641d3a5e70ea105f76a6a77bc0553d07`. This should also work with `git revert`. This is the last commit prior to the repository being deprecated.
-    * Then, you'll want to enter `export HOMEBREW_NO_AUTO_UPDATE=1 ` to freeze homebrew/science at the current commit, or else the below instructions will update homebrew, and the installation will not work.
-    * Lastly, run the below:
     ```
-      brew tap homebrew/science
+      brew tap udacity/CarND-MPC-Project https://github.com/udacity/CarND-MPC-Project
       brew install ipopt --with-openblas
     ```
 
