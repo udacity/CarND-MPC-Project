@@ -24,7 +24,6 @@ cd $srcdir/ThirdParty/Lapack
 ./get.Lapack
 mkdir -p build && cd build
 ../configure --prefix=$prefix --disable-shared --with-pic \
-    --with-blas="$prefix/lib/libcoinblas.a -lgfortran"
 make install
 
 # ASL
@@ -38,7 +37,6 @@ cd $srcdir/ThirdParty/Mumps
 # build everything
 cd $srcdir
 ./configure --prefix=$prefix coin_skip_warn_cxxflags=yes \
-    --with-blas="$prefix/lib/libcoinblas.a -lgfortran" \
     --with-lapack=$prefix/lib/libcoinlapack.a
 make
 make test
