@@ -38,6 +38,15 @@ Self-Driving Car Engineer Nanodegree Program
 3. Compile: `cmake .. && make`
 4. Run it: `./mpc`.
 
+## Build with Docker-Compose
+The docker-compose can run the project into a container
+and exposes the port required by the simulator to run.
+
+1. Clone this repo.
+2. Build image: `docker-compose build`
+3. Run Container: `docker-compose up`
+4. On code changes repeat steps 2 and 3.
+
 ## Tips
 
 1. It's recommended to test the MPC on basic examples to see if your implementation behaves as desired. One possible example
