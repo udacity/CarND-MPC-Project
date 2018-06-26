@@ -1,3 +1,4 @@
+#include "json.hpp"
 #include <math.h>
 #include <uWS/uWS.h>
 #include <chrono>
@@ -7,7 +8,6 @@
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "MPC.h"
-#include "json.hpp"
 
 // for convenience
 using json = nlohmann::json;
