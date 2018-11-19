@@ -1,0 +1,19 @@
+version: "3.2"
+services:
+  mpc:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "4567:4567"
+    volumes:
+      - type: bind
+        source: ./
+        target: /mpc
+
+    command: bash -c "mkdir -p /mpc/build &&
+                      cd /mpc/build && 
+                      cmake -DCMAKE_C_COMPILER="/usr/bin/gcc-6" -DCMAKE_CXX_COMPILER="/usr/bin/g++-6" .. && make && ./mpc"
+
+volumes:
+  .:
