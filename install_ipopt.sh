@@ -17,7 +17,7 @@ cd $srcdir/ThirdParty/Blas
 ./get.Blas
 mkdir -p build && cd build
 ../configure --prefix=$prefix --disable-shared --with-pic
-make install
+sudo make install
 
 # Lapack
 cd $srcdir/ThirdParty/Lapack
@@ -25,7 +25,7 @@ cd $srcdir/ThirdParty/Lapack
 mkdir -p build && cd build
 ../configure --prefix=$prefix --disable-shared --with-pic \
     --with-blas="$prefix/lib/libcoinblas.a -lgfortran"
-make install
+sudo make install
 
 # ASL
 cd $srcdir/ThirdParty/ASL
@@ -42,4 +42,4 @@ cd $srcdir
     --with-lapack=$prefix/lib/libcoinlapack.a
 make
 make test
-make -j1 install
+sudo make -j1 install
