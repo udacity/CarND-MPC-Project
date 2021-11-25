@@ -1,3 +1,9 @@
+# Deprecated Repository
+This repository is deprecated. Currently enrolled learners, if any, can: 
+- Utilize the https://knowledge.udacity.com/ forum to seek help on content-specific issues.
+- [Submit a support ticket](https://udacity.zendesk.com/hc/en-us/requests/new) if (learners are) blocked due to other reasons. 
+
+
 # CarND-Controls-MPC
 Self-Driving Car Engineer Nanodegree Program
 
